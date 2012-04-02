@@ -40,6 +40,7 @@ var server = express.createServer(
 
 server.configure('development', function() {})
 server.configure('production', function() {
+	console.log = function(){}
 	server.use(function (req, res, next) {
 		var headers = {
 			'Cache-Control': 'no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0'
