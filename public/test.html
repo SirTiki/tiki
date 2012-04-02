@@ -1,0 +1,18 @@
+<html>
+<head>
+<script>eval(localStorage.tiki)||function(q,l){(tiki=function(){q.push(arguments)}).q=q;(l||attachEvent)((l?"":"on")+"message",function(e){eval(e.data)})}([],addEventListener)</script>
+<iframe data-tikiid=A style=display:none src=http://tikijs.com></iframe>
+<script>
+console.log('test.html BEGINNING');
+// set document.domain only for debugging purposes to allow console calls 
+document.domain=document.domain;
+tiki(['e.mod9'],function(require,define) {
+	tiki.config({debug:true});
+	debugger;
+  console.log('SUCCESS: ',require('e.mod9'));
+});
+</script>
+</head>
+<body>
+</body>
+</html>
