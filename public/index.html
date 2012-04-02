@@ -7,7 +7,7 @@ window.seed = {
 		shim: {{{shim}}}, // The define and require shims for lazy-loading (userland & core)  
 		bootstrap: {{{bootstrap}}} // The initial bootstrap script (may be overridden later) 
 };
-// console.debug=function(){};
+console.debug=function(){};
 eval(localStorage.bootstrap || window.seed.bootstrap);
 </script>
 </head>
