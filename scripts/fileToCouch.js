@@ -17,7 +17,7 @@ function onError(err) {
 	
 	step(onError, function() {
 		var parallel = this.parallel();
-		request('http://admin:admin@localhost:5984/registry/_design/app/_list/short/listAll', function(err, res) {
+		request('http://admin:tikiftw@localhost:5984/registry/_design/app/_list/short/listAll', function(err, res) {
 			console.log(res.body);
 			var list = JSON.parse(res.body);
 			
@@ -29,9 +29,9 @@ function onError(err) {
 				list.forEach(function(v) {
 					var next = group();
 					
-					request('http://admin:admin@localhost:5984/registry/'+v, function(err, res2) {
+					request('http://admin:tikiftw@localhost:5984/registry/'+v, function(err, res2) {
 						console.log('DELETING: ',v,JSON.parse(res2.body)._rev);
-						request.del('http://admin:admin@localhost:5984/registry/'+v+'?rev='+JSON.parse(res2.body)._rev, function(err, res, body) {
+						request.del('http://admin:tikiftw@localhost:5984/registry/'+v+'?rev='+JSON.parse(res2.body)._rev, function(err, res, body) {
 							console.log(body);
 							next();
 						});
