@@ -8,7 +8,7 @@ var _ = require('underscore')
 	, apps = {
 			'A': {
 				origins: {
-					domains: ['a.tikijs.com','tikijs.com','a.com','b.com']
+					domains: ['a.tikijs.net','tikijs.net','a.com','b.com']
 				, patterns: []
 				}
 			}
