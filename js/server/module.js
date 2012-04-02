@@ -191,7 +191,6 @@ Module = {
 
 				var group = this.group()
 				names.forEach(function(name) {
-					if (localFilter.indexOf(name) !== -1) return group()();
 
 					var flag = false,
 						next = group()
@@ -201,16 +200,16 @@ Module = {
 
 					var version = v.version || v.latest || semver.maxSatisfying(localFilter, v.range);
 
-					// version cuold be null
-
 					if (version && ret[v.name] && ret[v.name][version]) {
+						if (localFilter.indexOf(v.name+'@'+version) !== -1) return next();
 						if (ret[v.name][version].deps.length) {
 							return doit(ret[v.name][version].deps, next);
 						} else return next();
 					} else {
 						// mark the module as pending in the filter
 						Module.getModule(name, function(err, realVersion, source, deps) {
-							localFilter.push(realVersion);
+							if (localFilter.indexOf(v.name+'@'+realVersion) !== -1) return next();
+							localFilter.push(v.name+'@'+realVersion);
 							ret[v.name] = {v: {}, meta: {latest: null}};
 
 							if (err) return next(err);

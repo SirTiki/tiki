@@ -7,6 +7,8 @@
 var _ = require('underscore')
 
 function ctor(id) {
+	if (Client.clients[id]) return Client.clients[id];
+	
 	this.mods = []
 	this.id = parseInt(id) || ++Client.id
 	console.log('Client.id: ', this.id)
