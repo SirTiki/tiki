@@ -1,0 +1,1 @@
+{"author":"Adam Crabtree","name":"tiki.main","shared":true,"version":"0.0.1","dependencies":{"tiki.Bootstrap":"*","tiki.Store":"*","tiki.underscore":"*","tiki.getDependencies":"*","tiki.step":"*"}}
