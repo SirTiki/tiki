@@ -3,8 +3,8 @@
  * @type {Request}
  */
 
-var Client = require('./Client')
-	, Module = require('./Module')
+var Client = require('./client')
+	, Module = require('./module')
 
 function Request(data) {
 	this.mods = data.mods
