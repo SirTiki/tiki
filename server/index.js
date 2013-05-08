@@ -6,9 +6,9 @@ var fs = require('fs')
 	, Mu = require('mustache')
 	, $$ = require('lib/twostep')
 	, _ = require('lib/_')
-	, Module = require('./module')
-	, App = require('./app')
-	, Request = require('./request')
+	, Module = require('lib/module')
+	, App = require('lib/app')
+	, Request = require('lib/request')
 	, version = "0.0.1"
 	, config
 	, server

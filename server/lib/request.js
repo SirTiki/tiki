@@ -5,8 +5,8 @@
 
 "use strict";
 
-var Client = require('./client')
-	, Module = require('./module')
+var Client = require('lib/client')
+	, Module = require('lib/module')
 	, $$ = require('lib/twostep')
 
 module.exports = Request
