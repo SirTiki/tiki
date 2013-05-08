@@ -16,7 +16,12 @@
   "trailing": true,
   "sub": true,
   "smarttabs": true,
-  "supernew": true,
+  "supernew": false,
+  "newcap": false,
   "proto": true,
-  "onevar": true
+  "undef": true,
+  "unused": "vars",
+  "onevar": true,
+  "validthis": true,
+  "node": true
 }
