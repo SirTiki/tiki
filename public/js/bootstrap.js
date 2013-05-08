@@ -13,10 +13,10 @@ for (var i in window.seed.mods) {
 	define.version = window.seed.mods[i].meta.latest;
 	eval(window.seed.mods[i].v[window.seed.mods[i].meta.latest].files[i]);
 }
-window.seed.mods['tiki.defineShim'] = {v: {'0.0.1': {files: {'tiki.defineShim': window.seed.shim}}}, meta: {latest: '0.0.1'}}
+window.seed.mods['tiki/defineShim'] = {v: {'0.0.1': {files: {'tiki/defineShim': window.seed.shim}}}, meta: {latest: '0.0.1'}}
 
-window.tiki = require('tiki.Bootstrap');
-console.debug("Loading tiki.Bootstrap: " + (!!window.tiki ? 'SUCCESS' : 'FAIL'));
+window.tiki = require('tiki/Bootstrap');
+console.debug("Loading tiki/Bootstrap: " + (!!window.tiki ? 'SUCCESS' : 'FAIL'));
 window.tiki.init(window.seed.mods);
 
 document.domain = document.domain;

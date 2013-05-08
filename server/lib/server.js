@@ -15,13 +15,13 @@ var fs = require('fs')
 			port: 80
 		, "public": __dirname + '/../../public'
 		, development: {
-				
+
 			}
 		, production: {
 				maxAge: 1000 * 3600 * 24 * 365 * 10
 			}
 		}
-	
+
 var err = error(function(err, res) {
 	if (res) {
 		res.writeHead(500)
@@ -55,11 +55,11 @@ server.configure('production', function() {
 	})
 })
 
-server.use(server.router);
+server.use(server.router)
 server.use(express.static(config.public, { maxAge: config.production.maxAge }))
-	
-server.listen(config.port);
-console.log('Listening on port: ',config.port);
+
+server.listen(config.port)
+console.log('Listening on port: ',config.port)
 
 
 
@@ -67,19 +67,19 @@ console.log('Listening on port: ',config.port);
 
 // Should be placed on CDN in production
 server.get('/', function (req, res) {
-	console.log('ROOT');
+	console.log('ROOT')
 	step(function () {
-		Module.getModules(['tiki.Bootstrap', 'tiki.tiki'], this.parallel());
-		fs.readFile(config.public + '/index.html', 'utf8', this.parallel());
-		fs.readFile(config.public + '/js/shim.js', 'utf8', this.parallel());
-		fs.readFile(config.public + '/js/bootstrap.js', 'utf8', this.parallel());
+		Module.getModules(['tiki/Bootstrap', 'tiki/tiki'], this.parallel())
+		fs.readFile(config.public + '/index.html', 'utf8', this.parallel())
+		fs.readFile(config.public + '/js/shim.js', 'utf8', this.parallel())
+		fs.readFile(config.public + '/js/bootstrap.js', 'utf8', this.parallel())
 	}, err(res, function (mods, tpl, shim, bootstrap) {
 		var html = Mu.to_html(tpl,{
 			version: version,
 			mods: JSON.stringify(mods),
 			shim: JSON.stringify(shim),
 			bootstrap: JSON.stringify(bootstrap)
-		});
+		})
 
 		// Turn caching on
 		if (server.settings.env === 'production') {
@@ -87,11 +87,11 @@ server.get('/', function (req, res) {
 				'Expires': 'Sun, 19 Apr 2020 11:43:00 GMT'
 			, 'Cache-Control': 'public, max-age=630720000'
 			, 'Last-Modified': 'Mon, 29 Jun 1998 02:28:12 GMT'
-			});
+			})
 		}
-		res.end(html);
-	}));
-});
+		res.end(html)
+	}))
+})
 
 server.all('/combo?', function (req, res) {
 	console.log('--------------------------------\ncombo')
@@ -99,37 +99,37 @@ server.all('/combo?', function (req, res) {
 		, app = App(data.appId)
 
 	if (!app) {
-		return res.end(JSON.stringify({error: 'Invalid AppId'}));
+		return res.end(JSON.stringify({error: 'Invalid AppId'}))
 	}
 //	if (!app.isAuthorized(data.origin)) {
-//		return res.end(JSON.stringify({error: 'Invalid Origin'}));
+//		return res.end(JSON.stringify({error: 'Invalid Origin'}))
 //	}
-	
+
 	var request, needsId = isNaN(parseInt(data.id))
 	step(function () {
-		var next = this.parallel();
+		var next = this.parallel()
 
 		if (needsId) {
-			data.id = version;
-			data.mods.push('tiki.main');
-			console.log(data.mods);
+			data.id = version
+			data.mods.push('tiki/main')
+			console.log(data.mods)
 
-			fs.readFile(config.public + '/js/hotBootstrap.js', 'utf8', this.parallel());
+			fs.readFile(config.public + '/js/hotBootstrap.js', 'utf8', this.parallel())
 		}
-		request = new Request(data);
+		request = new Request(data)
 
-		request.getModules(next);
+		request.getModules(next)
 	}, err(function (mods, hotBootstrap) {
-		var ret = {mods: mods};
+		var ret = {mods: mods}
 		if (hotBootstrap) {
-			ret.eval = 'localStorage.bootstrap = '+JSON.stringify(hotBootstrap);
+			ret.eval = 'localStorage.bootstrap = '+JSON.stringify(hotBootstrap)
 		}
 		if (needsId) {
-			ret.id = request.client.id;
+			ret.id = request.client.id
 		}
-		res.json(ret);
-	}));
-});
+		res.json(ret)
+	}))
+})
 
 
 

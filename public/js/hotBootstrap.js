@@ -10,24 +10,24 @@
 
 	console.debug(window.seed);
 	// Load the define bootstrap (shims)
-	mods['tiki.defineShim'] = {v: {'0.0.1': {files: {'tiki.defineShim': window.seed.shim}}}, meta: {latest: '0.0.1'}}
+	mods['tiki/defineShim'] = {v: {'0.0.1': {files: {'tiki/defineShim': window.seed.shim}}}, meta: {latest: '0.0.1'}}
 	// Must eval first / manually, object keys have no ordering
 	eval(window.seed.shim)
 
 
 	// Eval all modules (the define bootstrap will fire when define is defined) 
-	mods['tiki.getDependencies'] = {v: {}, meta: JSON.parse(localStorage['$tiki.getDependencies'])}
-	version = mods['tiki.getDependencies'].meta.latest
-	mods['tiki.getDependencies'].v[version] = {files: JSON.parse(localStorage['_tiki.getDependencies@' + version]), meta: mods['tiki.getDependencies'].meta.v[version]}
+	mods['tiki/getDependencies'] = {v: {}, meta: JSON.parse(localStorage['$tiki/getDependencies'])}
+	version = mods['tiki/getDependencies'].meta.latest
+	mods['tiki/getDependencies'].v[version] = {files: JSON.parse(localStorage['_tiki/getDependencies@' + version]), meta: mods['tiki/getDependencies'].meta.v[version]}
 	for (var i in mods) {
 		evalit(i, mods[i])
 	}
 
-	mods['tiki.main'] = {v: {}, meta: JSON.parse(localStorage['$tiki.main'])}
-	version = mods['tiki.main'].meta.latest
-	mods['tiki.main'].v[version] = {files: JSON.parse(localStorage['_tiki.main@' + version]), meta: mods['tiki.main'].meta.v[version]}
+	mods['tiki/main'] = {v: {}, meta: JSON.parse(localStorage['$tiki/main'])}
+	version = mods['tiki/main'].meta.latest
+	mods['tiki/main'].v[version] = {files: JSON.parse(localStorage['_tiki/main@' + version]), meta: mods['tiki/main'].meta.v[version]}
 
-	var deps = require('tiki.getDependencies')(mods['tiki.main'].meta.v[version].deps, function(path) {
+	var deps = require('tiki/getDependencies')(mods['tiki/main'].meta.v[version].deps, function(path) {
 		var name, ret, val
 
 		path = path.split('@')
@@ -42,14 +42,14 @@
 		val = localStorage['_' + name + '@' + version]
 		ret.v[version] = {files: (val && JSON.parse(val)) || (mods[name] && mods[name].v[version] && mods[name].v[version].files[name]), meta: ret.meta.v[version]}
 
-		console.debug('tiki.getDependencies: ', path, ret.meta.v[version]);
+		console.debug('tiki/getDependencies: ', path, ret.meta.v[version]);
 		return ret.meta.v[version].deps || [];
 	})
 
-	deps.push('tiki.main');
+	deps.push('tiki/main');
 
 	for (var i=0,n; n=deps[i]; ++i) {
-		if (n !== 'tiki.defineShim') {
+		if (n !== 'tiki/defineShim') {
 			evalit(n, mods[n])
 		} else {
 			console.debug('FIX THIS')
@@ -58,8 +58,8 @@
 
 
 
-	window.tiki = require('tiki.main');
-	console.debug("Loading tiki.main: " + (!!window.tiki ? 'SUCCESS' : 'FAIL'));
+	window.tiki = require('tiki/main');
+	console.debug("Loading tiki/main: " + (!!window.tiki ? 'SUCCESS' : 'FAIL'));
 	window.tiki.init(localStorage.id, mods);
 
 	document.domain = document.domain;

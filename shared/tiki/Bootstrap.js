@@ -1,11 +1,11 @@
-var define = require('tiki.define')
-	, globalEval = require('tiki.globalEval')
-	, needs = require('tiki.needs')
-	, getDependencies = require('tiki.getDependencies')
-	, semver = require('tiki.semver')
+var define = require('tiki/define')
+	, globalEval = require('tiki/globalEval')
+	, needs = require('tiki/needs')
+	, getDependencies = require('tiki/getDependencies')
+	, semver = require('tiki/semver')
 	, Bootstrap
 
-console.debug('tiki.Bootstrap ctor');
+console.debug('tiki/Bootstrap ctor');
 
 Bootstrap = {
 	mods: null,
@@ -16,21 +16,21 @@ Bootstrap = {
 		console.debug('Bootstrap.init: ', mods);
 		this.mods = mods;
 
-		deps = getDependencies('tiki.tiki', this.mods);
+		deps = getDependencies('tiki/tiki', this.mods);
 
 		// Client bootstrap modules must be posted separately to maintain sourceURL integrity
-		console.log('defineShim: ', this.mods['tiki.defineShim'])
+		console.log('defineShim: ', this.mods['tiki/defineShim'])
 
 		this.clientBootstrap = [
-			this.mods['tiki.defineShim'].v[this.mods['tiki.defineShim'].meta.latest].files['tiki.defineShim'],
-			'define.version = "'+this.mods['tiki.define'].meta.latest+'";'+this.mods['tiki.define'].v[this.mods['tiki.define'].meta.latest].files['tiki.define']
+			this.mods['tiki/defineShim'].v[this.mods['tiki/defineShim'].meta.latest].files['tiki/defineShim'],
+			'define.version = "'+this.mods['tiki/define'].meta.latest+'";'+this.mods['tiki/define'].v[this.mods['tiki/define'].meta.latest].files['tiki/define']
 		];
 
 		for (i = 0, l = deps.length; i < l; ++i) {
-			if (deps[i] === 'tiki.defineShim' || deps[i] === 'tiki.define') continue;
+			if (deps[i] === 'tiki/defineShim' || deps[i] === 'tiki/define') continue;
 			this.clientBootstrap.push('define.version = "'+this.mods[deps[i]].meta.latest+'";'+this.mods[deps[i]].v[this.mods[deps[i]].meta.latest].files[deps[i]]);
 		}
-		this.clientBootstrap.push('window.tiki = require("tiki.tiki")');
+		this.clientBootstrap.push('window.tiki = require("tiki/tiki")');
 
 		this.onMessage.that = this;
 		if (window.addEventListener) {
@@ -158,7 +158,7 @@ Bootstrap = {
 			}
 
 			// TODO: This could probably be moved to a module
-			deps = getDependencies('tiki.main', this.mods);
+			deps = getDependencies('tiki/main', this.mods);
 			for (i = 0; n = deps[i]; ++i) {
 				if (typeof res.mods[n] !== 'undefined') {
 					console.debug('UPDATE THIS EVAL WITH VERSIONING, RELATIVE PATH: ', res.mods[n])
@@ -175,7 +175,7 @@ Bootstrap = {
 				}
 			}
 
-			window.tiki = require('tiki.main');
+			window.tiki = require('tiki/main');
 			tiki.init();
 		}
 	}

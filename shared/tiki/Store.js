@@ -1,4 +1,4 @@
-console.debug('tiki.Store ctor')
+console.debug('tiki/Store ctor')
 
 var inherits = require('tiki/inherits')
   , EventEmitter = require('tiki/EventEmitter')
@@ -189,7 +189,7 @@ _.extend(Store
         throw new Error('No metadata set for ', name)
       }
       if (name.split('.')[0] === 'tiki' && namespace !== '$') {
-        throw new Error('tiki.* must be stored in $')
+        throw new Error('tiki/* must be stored in $')
       }
 
       if (namespace === '$') {
@@ -268,10 +268,10 @@ _.extend(Store
 
 - s
 
-All tiki.* get store in $
-No tiki.* can be depend on a non-tiki.* module
-=> when storing tiki.*
+All tiki/* get store in $
+No tiki/* can be depend on a non-tiki/* module
+=> when storing tiki/*
   1. setItem into $
-  2. setMeta: deps must all be tiki.* (throw error)
+  2. setMeta: deps must all be tiki/* (throw error)
 
 */

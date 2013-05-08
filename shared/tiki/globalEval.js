@@ -1,4 +1,4 @@
-console.debug('tiki.globalEval ctor');
+console.debug('tiki/globalEval ctor');
 
 module.exports = function globalEval(data) {
 	if ( data && (/\S/).test( data ) ) {

@@ -1,9 +1,9 @@
-console.debug('tiki.define ctor')
+console.debug('tiki/define ctor')
 
 // define can never have any dependencies since it is the root module
 var defineVersion = define.version
 	, cache = {}
-	, defined = {'tiki.define': {}}
+	, defined = {'tiki/define': {}}
 	, queue = []
 
 function define(name, deps, ctor) {
@@ -140,7 +140,7 @@ function require(name, cb, module) {
 	return cache[key]
 }
 
-defined['tiki.define'][defineVersion] = {ctor: arguments.callee}
+defined['tiki/define'][defineVersion] = {ctor: arguments.callee}
 
 define.require = require
 define.amd = true
@@ -151,4 +151,4 @@ module.exports = {
 	require: require
 }
 
-cache['tiki.define@'+defineVersion] = module.exports
+cache['tiki/define@'+defineVersion] = module.exports

@@ -1,4 +1,4 @@
-console.debug('tiki.getDependencies ctor')
+console.debug('tiki/getDependencies ctor')
 // Calculate all the dependency names given an array of names, paths
 // TODO: Maintain cache across calls?
 module.exports =  function(names, mods) {

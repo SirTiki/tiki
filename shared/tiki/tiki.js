@@ -2,7 +2,7 @@ var listener = typeof arguments !== 'undefined' ? arguments.callee : null
 console.debug('removing old message listeners', listener)
 window.removeEventListener('message', listener)
 
-console.debug('tiki.tiki ctor')
+console.debug('tiki/tiki ctor')
 
 var define = require('tiki/define')
   , globalEval = require('tiki/globalEval')

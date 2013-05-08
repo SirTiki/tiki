@@ -1,4 +1,4 @@
-console.debug('tiki.main', Bootstrap)
+console.debug('tiki/main', Bootstrap)
 
 var Bootstrap = require('tiki/Bootstrap')
 	, Store = require('tiki/Store')
@@ -9,7 +9,7 @@ var Bootstrap = require('tiki/Bootstrap')
 module.exports = _.extend(Bootstrap, {
 	_init: Bootstrap.init
 , init: function(id, mods) {
-		console.debug('tiki.main::init', mods)
+		console.debug('tiki/main::init', mods)
 
 		var self = this
 

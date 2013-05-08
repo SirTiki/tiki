@@ -58,7 +58,7 @@
     exports._ = _;
   } else if (typeof define === 'function' && define.amd) {
     // Register as a named module with AMD.
-    define('tiki.underscore', function() {
+    define('tiki/underscore', function() {
       return _;
     });
   } else {

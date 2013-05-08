@@ -1,4 +1,5 @@
-define('a.mod1',[],function() {
-  console.debug('a.mod1 ctor');
-  return {id: 'a.mod1'};
-});
+console.debug('a/mod1 ctor')
+
+module.exports = {
+	id: 'a/mod1'
+}

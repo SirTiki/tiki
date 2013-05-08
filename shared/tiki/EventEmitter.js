@@ -1,4 +1,4 @@
-console.debug('tiki.EventEmitter');
+console.debug('tiki/EventEmitter');
 /**
  * @preserve EventEmitter v2.0.0
  * 
