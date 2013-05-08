@@ -46,8 +46,8 @@ function sbind(that, fnName) {
 
 // Create a step that calls the function with spread
 // Ignore step params passed
-$$.scall = scall
-function scall(that, fnName) {
+$$.stepit = stepit
+function stepit(that, fnName) {
   var args
     , fn
 

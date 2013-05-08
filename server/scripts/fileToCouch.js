@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 var fs = require('fs')
 ,	vm = require('vm')
 ,	childProcess = require('child_process')
@@ -22,7 +24,7 @@ $$([
 		rimraf(modulesDir, $.none())
 
 		$.run([
-			$$.scall(request, couchUrl)
+			$$.stepit(request, couchUrl)
 		, function($, res) {
 				var list
 					, group = $.group('none')
@@ -36,7 +38,7 @@ $$([
 					var moduleUrl = registryUrl+moduleName
 
 					$.run([
-						$$.scall(request, url)
+						$$.stepit(request, url)
 					, function($, res2) {
 							var body = JSON.parse(res2.body)
 								, revision = body._rev
@@ -50,7 +52,7 @@ $$([
 			}
 		], $.none())
 	}
-, $$.scall(fs, 'mkdir', modulesDir)
+, $$.stepit(fs, 'mkdir', modulesDir)
 , function($) {
 		var group = $.group()
 
@@ -58,7 +60,7 @@ $$([
 			var parentDir = path.join(jsDir, folder)
 
 			$.run([
-				$$.scall(fs, 'readdir', parentDir)
+				$$.stepit(fs, 'readdir', parentDir)
 			, function($, fileNames) {
 					var innerGroup = $.group()
 
@@ -98,7 +100,7 @@ function convertModuleToPackage(modulePath, callback) {
   }
 
 	$$([
-		$$.scall(fs, 'mkdir', packageDir)
+		$$.stepit(fs, 'mkdir', packageDir)
 	, function($) {
 			var dest
 
@@ -110,7 +112,7 @@ function convertModuleToPackage(modulePath, callback) {
 				.on('end', $.none())
 
 			$.run([
-				$$.scall(fs, 'readFile', modulePath)
+				$$.stepit(fs, 'readFile', modulePath)
 			, function(data) {
 					var called = false
 						, deps

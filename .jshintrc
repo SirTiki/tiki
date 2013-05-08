@@ -1,4 +1,9 @@
 {
+  "predef": {
+    "module": false,
+    "define": false,
+    "require": false
+  }
   "asi": true,
   "boss": true,
   "debug": true,
@@ -16,7 +21,10 @@
   "trailing": true,
   "sub": true,
   "smarttabs": true,
-  "supernew": true,
+  "supernew": false,
+  "newcap": false,
   "proto": true,
+  "undef": true,
+  "unused": "vars",
   "onevar": true
 }
