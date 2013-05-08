@@ -1,0 +1,16 @@
+module.exports = {
+	Bootstrap: require('./Bootstrap')
+, define: require('./define')
+, EventEmitter: require('./EventEmitter')
+, getDependencies: require('./getDependencies')
+, globalEval: require('./globalEval')
+, HotBootstrap: require('./HotBootstrap')
+, inherits: require('./inherits')
+, main: require('./main')
+, needs: require('./needs')
+, semver: require('./semver')
+, step: require('./step')
+, Store: require('./Store')
+, tiki: require('./tiki')
+, underscore: require('./underscore')
+}
