@@ -3,7 +3,6 @@
 var fs = require('fs')
 ,	vm = require('vm')
 ,	childProcess = require('child_process')
-,	util = require('util')
 ,	path = require('path')
 
 ,	request = require('request')
@@ -38,7 +37,7 @@ $$([
 					var moduleUrl = registryUrl+moduleName
 
 					$.run([
-						$$.stepit(request, url)
+						$$.stepit(request, moduleUrl)
 					, function($, res2) {
 							var body = JSON.parse(res2.body)
 								, revision = body._rev
@@ -86,8 +85,7 @@ $$([
 	5. Publish package
  */
 function convertModuleToPackage(modulePath, callback) {
-	var parentDir = path.dirname(modulePath)
-		, fileName = path.basename(modulePath)
+	var fileName = path.basename(modulePath)
 		, baseName = path.basename(fileName, 'js')
 		, packageDir = path.join(modulesDir, baseName)
 		, template
@@ -140,7 +138,7 @@ function convertModuleToPackage(modulePath, callback) {
 						}
 
 						if (!called) {
-							console.log(new Error('Failed to load: ' + filename))
+							console.log(new Error('Failed to load: ' + fileName))
 						}
 
 						console.log('dependencies: ', deps)

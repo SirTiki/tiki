@@ -2,9 +2,10 @@
   "name": "_",
   "version": "0.0.1",
   "description": "ERROR: No README.md file found!",
-  "main": "index.js",
+  "main": "_.js",
   "dependencies": {
-    "lodash": "~1.2.0"
+    "lodash": "~1.2.0",
+    "underscore.string": "~2.3.1"
   },
   "devDependencies": {},
   "scripts": {

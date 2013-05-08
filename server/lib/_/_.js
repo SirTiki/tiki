@@ -33,8 +33,8 @@ function isSimpleObject(obj){
 // https://github.com/mcandre/node-zipwith/blob/master/zipwith.js
 _.zipWith = zipWith
 function zipWith(f) {
-	var args = _.zip.apply(null, Array.prototype.slice.call(arguments, 1));
-	return args.map(function (arg) { return f.apply(null, arg); });
+  var args = _.zip.apply(null, Array.prototype.slice.call(arguments, 1));
+  return args.map(function (arg) { return f.apply(null, arg); });
 }
 
 _.sparseZip = sparseZip
@@ -328,8 +328,6 @@ function mapOpts(fn, list) {
 _.dbind = dbind
 function dbind(that, fnName) {
   var args = _.toArray(arguments)
-    , callback = args[args.length-1]
-    , fn
 
   args.unshift(_.dcall)
   return _.partial.apply(_, args)
@@ -399,8 +397,6 @@ function throwError(Err) {
 
 _.createSubError = createSubError
 function createSubError(Ctor, prototype, SuperCtor) {
-  var check = false
-
   if (typeof Ctor !== 'function') {
     SuperCtor = prototype
     prototype = Ctor
@@ -599,4 +595,4 @@ _.mixin({
   objectMap: objectMap
 })
 _.trav = trav
-module.exports._ = _
+module.exports = _

@@ -16,7 +16,7 @@
   "trailing": true,
   "sub": true,
   "smarttabs": true,
-  "supernew": false,
+  "supernew": true,
   "newcap": false,
   "proto": true,
   "undef": true,

@@ -1,5 +1,5 @@
 var $$ = require('stepdown')
-  , _ = require('lib/_')
+  , _ = require('lib/_')._
 
 $$.exec = exec
 function exec(that, fnName) {
@@ -10,18 +10,17 @@ function exec(that, fnName) {
     throw new Error('Invalid callback for '+fnName+' on '+that)
   }
 
-  $$([sbind.apply(null, args)], callback)
+  $$([partial.apply(null, args)], callback)
 }
 
-// Create a step that calls the function with spread
-// Append step params passed
-$$.sbind = sbind
-function sbind(that, fnName) {
-  var args
+
+$$.partialValue = partialValue
+function partialValue(that, fnName) {
+  var outerArgs
     , fn
 
   if ('function' === typeof that) {
-    args = _.slice(arguments, 1)
+    outerArgs = _.slice(arguments, 1)
     fn = that
     that = null
   } else {
@@ -29,18 +28,46 @@ function sbind(that, fnName) {
       throw new Error('Invalid function: '+fnName+' on '+that)
     }
 
-    args = _.slice(arguments, 2)
+    outerArgs = _.slice(arguments, 2)
+    fn = that[fnName]
+  }
+
+  return function stepified() {
+    var innerArgs = _.slice(arguments, 1)
+      , args
+
+    args = _.sparseZip(outerArgs, innerArgs)
+    return fn.apply(that, args)
+  }
+}
+
+// Create a step that calls the function with spread
+// Append step params passed
+$$.partial = partial
+function partial(that, fnName) {
+  var outerArgs
+    , fn
+
+  if ('function' === typeof that) {
+    outerArgs = _.slice(arguments, 1)
+    fn = that
+    that = null
+  } else {
+    if (typeof that[fnName] !== 'function') {
+      throw new Error('Invalid function: '+fnName+' on '+that)
+    }
+
+    outerArgs = _.slice(arguments, 2)
     fn = that[fnName]
   }
 
   return function stepified($) {
-    var innerArgs = _.reject(_.slice(arguments, 1),
-      function(v) {
-        return 'undefined' === typeof v
-      })
+    var innerArgs = _.slice(arguments, 1)
+      , args
 
-    innerArgs = args.concat(innerArgs, $.spread())
-    fn.apply(that, innerArgs)
+    args = _.sparseZip(outerArgs, innerArgs)
+    args.push($.spread())
+    fn.apply(that, args)
   }
 }
 
@@ -83,21 +110,11 @@ function data(key) {
   }
 }
 
-$$.partial = partial
-function partial(fn) {
-  var args = _.slice(arguments, 1)
-
-  return function($) {
-    var args2 = _.sparseZip(args, _.slice(arguments, 1))
-    return fn.apply(null, args2)
-  }
-}
-
 // Log passed arguments and step arguments
 $$.log = log
 function log() {
   var outerArgs = _.toArray(arguments)
-  return function($) {
+  return function() {
     var innerArgs = _.slice(arguments, 1)
     console.log.apply(console, outerArgs.concat(innerArgs))
   }
