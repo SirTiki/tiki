@@ -5,8 +5,9 @@
 <script>
 console.log('test.html BEGINNING');
 
-tiki(['e.mod9'],function(require,define) {
-	var mod9 = require('e.mod9')
+tiki(['e/mod9'], function(require, define) {
+	console.log('test.html INSIDE')
+	var mod9 = require('e/mod9')
   console.log('SUCCESS: ', mod9);
 });
 </script>

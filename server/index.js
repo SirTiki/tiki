@@ -3,19 +3,22 @@
 //Load some libraries
 var fs = require('fs')
 	, express = require('express')
+
 	, Mu = require('mustache')
+
 	, $$ = require('lib/twostep')
 	, _ = require('lib/_')
 	, Module = require('lib/module')
 	, App = require('lib/app')
 	, Request = require('lib/request')
+
 	, version = "0.0.1"
 	, config
 	, server
 
 config = {
 	port: 80
-, "public": __dirname + '/../../public'
+, "public": __dirname + '/../public'
 , development: {}
 , production: {
 		maxAge: 1000 * 3600 * 24 * 365 * 10
@@ -70,7 +73,7 @@ server.get('/', function (req, res) {
 	console.log('ROOT')
 	$$([
 		function ($) {
-			Module.getModules(['tiki.Bootstrap', 'tiki.tiki'], $.first())
+			Module.getModules(['tiki/Bootstrap', 'tiki/tiki'], $.first())
 			fs.readFile(config.public + '/index.html', 'utf8', $.first())
 			fs.readFile(config.public + '/js/shim.js', 'utf8', $.first())
 			fs.readFile(config.public + '/js/bootstrap.js', 'utf8', $.first())

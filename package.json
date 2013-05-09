@@ -1,0 +1,27 @@
+{
+  "name": "tiki",
+  "version": "0.0.1",
+  "description": "Tiki root",
+  "main": "./server/index.js",
+  "directories": {
+    "test": "test"
+  },
+  "dependencies": {
+    "nconf": "~0.6.7"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/SirTiki/tiki.git"
+  },
+  "author": "Adam Crabtree",
+  "license": "MIT",
+  "gitHead": "ea18f6b6bce2b1b07b64991c105c04e6e4df9e51",
+  "readmeFilename": "README",
+  "bugs": {
+    "url": "https://github.com/SirTiki/tiki/issues"
+  }
+}

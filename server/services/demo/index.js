@@ -1,6 +1,6 @@
 
 var fs = require('fs'),
-	root = __dirname + '/../../public/example'
+	root = __dirname + '/../../../public/example'
 	express = require('express'),
 	server1 = express.createServer(
 			express.static(root + '/a', { maxAge: 9999999999 })
@@ -23,6 +23,12 @@ server1.get('/1', function(req, res) {
 });
 server1.get('/2', function(req, res) {
 	fs.readFile(root + '/2.html', function(err, data) {
+		res.writeHead(200);
+		res.end(data);
+	});
+});
+server1.get('/3', function(req, res) {
+	fs.readFile(root + '/3.html', function(err, data) {
 		res.writeHead(200);
 		res.end(data);
 	});

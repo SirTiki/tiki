@@ -64,14 +64,6 @@ $$([
 	console.log('SUCCESS!')
 })
 
-
-/*
-	1. Make package directory
-	2. Move file
-	3. Execute files, get dependencies
-	4. Build package.json from dependencies
-	5. Publish package
- */
 function publish(modulePath, callback) {
 	$$([
 		$$.stepit(fs.stat, modulePath)

@@ -7,7 +7,9 @@
     "mustache": "~0.7.2",
     "lodash": "~1.2.1",
     "underscore.string": "~2.3.1",
-    "tar": "~0.1.17"
+    "tar": "~0.1.17",
+    "stepdown": "~0.3.16",
+    "detective": "~2.1.1"
   },
   "devDependencies": {},
   "scripts": {
