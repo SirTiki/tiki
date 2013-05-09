@@ -1,5 +1,3 @@
-console.debug('d/mod6 ctor')
-
 var mod5 = require('c/mod5')
 	, mod4 = require('c/mod4')
 

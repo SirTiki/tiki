@@ -2,7 +2,8 @@
   "predef": {
     "define": true,
     "module": true,
-    "exports": true
+    "exports": true,
+    "require": true
   },
   "devel": true,
   "asi": true,

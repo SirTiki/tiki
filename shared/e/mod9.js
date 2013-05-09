@@ -1,5 +1,3 @@
-console.debug('e/mod9 ctor')
-
 var mod8 = require('e/mod8')
 	, mod7 = require('d/mod7')
 

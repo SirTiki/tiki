@@ -1,5 +1,3 @@
-console.debug('d/mod7 ctor')
-
 var mod3 = require('b/mod3')
 
 module.exports = {
