@@ -78,12 +78,12 @@ server.get('/', function (req, res) {
 			fs.readFile(config.public + '/js/shim.js', 'utf8', $.first())
 			fs.readFile(config.public + '/js/bootstrap.js', 'utf8', $.first())
 		},
-		function ($, mods, tpl, shim, bootstrap) {
+		function ($, pkgs, tpl, shim, bootstrap) {
 			var html
 
 			html = Mu.to_html(tpl,{
 				version: version,
-				mods: JSON.stringify(mods),
+				pkgs: JSON.stringify(pkgs),
 				shim: JSON.stringify(shim),
 				bootstrap: JSON.stringify(bootstrap)
 			})
@@ -120,17 +120,19 @@ server.all('/combo?', function (req, res) {
 		function ($) {
 			if (needsId) {
 				data.id = version
-				data.mods.push('tiki.main')
-				console.log(data.mods)
+				data.pkgs.push('tiki/main')
+				console.log(data.pkgs)
+			}
 
+			request = new Request(data)
+			request.getModules($.first())
+
+			if (needsId) {
 				fs.readFile(config.public + '/js/hotBootstrap.js', 'utf8', $.first())
 			}
-			request = new Request(data)
-
-			request.getModules($.first())
-		},
-		function ($, mods, hotBootstrap) {
-			var ret = {mods: mods}
+		}
+	, function ($, pkgs, hotBootstrap) {
+			var ret = {pkgs: pkgs}
 
 			if (hotBootstrap) {
 				ret.eval = 'localStorage.bootstrap = '+JSON.stringify(hotBootstrap)

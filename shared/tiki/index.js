@@ -13,4 +13,5 @@ module.exports = {
 , Store: require('./Store')
 , tiki: require('./tiki')
 , underscore: require('./underscore')
+, keyParser: require('./keyParser')
 }

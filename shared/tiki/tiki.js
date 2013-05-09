@@ -1,18 +1,17 @@
-var listener = typeof arguments !== 'undefined' ? arguments.callee : null
-console.debug('removing old message listeners', listener)
-window.removeEventListener('message', listener)
-
 console.debug('tiki/tiki ctor')
 
 var define = require('tiki/define')
   , globalEval = require('tiki/globalEval')
   , getDependencies = require('tiki/getDependencies')
   , semver = require('tiki/semver')
+  , keyParser = require('tiki/keyParser')
   , callbacks = []
   , queue
 
 window.require = define.require
 window.define = define.define
+
+define = define.define
 
 module.exports = tiki
 function tiki(paths, cb) {
@@ -25,20 +24,19 @@ function tiki(paths, cb) {
 
   cb.paths = paths = [].concat(paths)
   for (i=0,l=paths.length; i<l; ++i) {
-    key = paths[i]
-    if (!key || typeof define.defined[key] !== 'undefined') continue
+    key = keyParser.parse(paths[i])
+    if (!key || typeof define.defined[key.full] !== 'undefined') continue
 
-    n = key.split('@')
-    v = n[1] || ''
-    n = n[0]
-
-    v = semver.maxSatisfying(Store.listVersions(n) || [],v)
+    console.log('key: ', key.full, Store.listVersions(key.module))
+    v = semver.maxSatisfying(Store.listVersions(key.module) || [],key.version)
     if (v) {
-      console.debug('Queue (localStorage): ',n)
-      localPaths.push(n+'@'+v)
+      key.version = v
+      key = keyParser.parse(keyParser.format(key))
+      console.debug('Queue (localStorage): ', key.full)
+      localPaths.push(key.full)
     } else {
-      console.debug('Queue (remote): ',n)
-      remotePaths.push(key)
+      console.debug('Queue (remote): ', key.full)
+      remotePaths.push(key.full)
     }
   }
 
@@ -54,19 +52,20 @@ function tiki(paths, cb) {
       console.debug('tiki().getRemotes cb', remotes)
 
       for(i=0,l=remotePaths.length; i<l; ++i) {
-        key = remotePaths[i]
-        n = key.split('@')
-        v = n[1] || ''
-        n = n[0]
+        key = keyParser.parse(remotePaths[i])
 
-        v = semver.maxSatisfying(Object.keys(remotes[n].v) || [], v)
-        remotePaths[i] = n+'@'+v
+        key.version = semver.maxSatisfying(Object.keys(remotes[key.name].v) || [], key.version)
+        remotePaths[i] = keyParser.format(key)
       }
 
+      console.log('before: ', remotePaths)
       var missing = load(remotePaths)
+      console.log('after: ', missing)
       if (missing.length) {
         throw new Error('Missing Dependencies: '+missing)
       }
+
+      console.log('remotePaths: ', remotePaths)
 
       cb(define.require, define.define)
     })
@@ -74,40 +73,45 @@ function tiki(paths, cb) {
 
   function load(paths) {
     var ret = []
-      , name
       , version
       , module
       , deps
+      , key
 
     deps = getDependencies(paths, function(path) {
-      var ret
+      var key = keyParser.parse(path)
+        , ret
         , v
 
-      path = path.split('@')
-      v = path[1] || ''
-      path = path[0]
-
-      v = semver.maxSatisfying(Object.keys(define.defined[path] || {}),v)
-      ret = Store.getMeta(path, v)
+      v = semver.maxSatisfying(Object.keys(define.defined[key.module] || {}), key.version)
+      key.version = v || key.version
+      key = keyParser.parse(keyParser.format(key))
+      ret = Store.getModMeta(key.full)
+      console.log('Dependencies for ', path, ret)
       return (ret && ret.deps) || []
     }).concat(paths)
 
+    console.log('deps: ', paths, deps)
     for (i=0; n=deps[i]; ++i) {
-      n = n.split('@')
-      name = n[0]
-      version = n[1] || ''
+      key = keyParser.parse(n)
 
-      version = semver.maxSatisfying(Store.listVersions(name) || [], version)
+      version = semver.maxSatisfying(Store.listVersions(key.module) || [], key.version)
 
+      console.log('version: ', version)
       if (version) {
-        module = Store.getMod(name, version)
+        key.version = version
+        key = keyParser.parse(keyParser.format(key))
+      console.log('key: ', key)
+        module = Store.getMod(key.full)
+      console.log('module: ', module)
         if (module === null) {
-          ret.push(name+'@'+version)
+          ret.push(key.full)
           continue
         }
         console.debug('UPDATE THIS EVAL WITH VERSIONING, RELATIVE PATH: ', module)
         define.version = version
-        globalEval(module.files[name])
+      console.log('module.src: ', module.src)
+        globalEval(module.src)
       }
     }
     return ret
@@ -142,8 +146,9 @@ tiki.ready = function(e,listener)  {
 
 tiki.onMessage = function(e){
   var key
+    , meta
     , m
-    , i, j
+    , i, j, k
 
   try {
     m = JSON.parse(e.data)
@@ -161,9 +166,14 @@ tiki.onMessage = function(e){
           console.debug('Eval\'ing: ', key)
           console.debug('UPDATE THIS EVAL WITH VERSIONING, RELATIVE PATH: ', m.data[i].v[j])
           define.version = j
-          globalEval(m.data[i].v[j].files[i])
+          console.log('here: ', i, j, m.data)
+          meta = m.data[i].v[j].meta || {}
+          Store.setMeta(i, j, {v: meta})
+          for (k in m.data[i].v[j].mods) {
+            globalEval(m.data[i].v[j].mods[k].src)
+            Store.setMod(k, j, m.data[i].v[j].mods[k])
+          }
         }
-        Store.setMod(i, j, m.data[i].v[j])
       }
     }
 
@@ -173,76 +183,105 @@ tiki.onMessage = function(e){
 }
 
 var Store = {
-    mods: {},
+    pkgs: {},
     metas: {},
-    getMod: function(name, version) {
-      var key, files
+    getMod: function(fullName) {
+      var parsedKey = keyParser.parse(fullName)
+        , key
+        , mod
 
-      if (!this.mods[name]) {
-        if ('tiki$' + name in localStorage) {
-          try {
-            this.metas[name] = JSON.parse(localStorage['tiki$' + name])
-          } catch(e) {
-            console.debug('Corrupted metadata (' + name + '): ', localStorage['tiki$' + name])
-
-            // if metadata's corrupted, purge references to module from localStorage
-            this.remove(name)
-          }
-        }
-
-        this.mods[name] = {v: {}, meta: this.metas[name]}
+      if (!parsedKey.version && this.metas[parsedKey.name].latest) {
+        parsedKey.version = this.metas[parsedKey.name].latest
+        parsedKey = keyParser.parse(keyParser.format(parsedKey))
       }
 
-      if (!this.metas[name]) {
+      console.log('here: ', this.pkgs, parsedKey)
+      if (!this.metas[parsedKey.full]) {
+        console.log('not cached. load from localStorage')
+        if ('tiki$' + parsedKey.module in localStorage) {
+          try {
+            this.metas[parsedKey.full] = JSON.parse(localStorage['tiki$' + parsedKey.module])
+          } catch(e) {
+            console.debug('Corrupted metadata (' + parsedKey.module + '): ', localStorage['tiki$' + parsedKey.module])
+
+            // if metadata's corrupted, purge references to module from localStorage
+            this.remove(parsedKey.module)
+          }
+        } else console.warn('tiki$' + parsedKey.module + ' NOT FOUND IN localStorage')
+
+      }
+
+      this.pkgs[parsedKey.name] = this.pkgs[parsedKey.name] || {v: {}, meta: this.metas[parsedKey.name]}
+      console.log('meta: ', this.metas[parsedKey.full])
+      if (!this.metas[parsedKey.full]) {
         return null
       }
 
-      version = version || this.metas[name].latest
-      key = 'tiki_' + name + '@' + version
+      key = 'tiki_' + parsedKey.full
 
-      if (!this.mods[name].v[version]) {
+      if (!this.pkgs[parsedKey.name] || !this.pkgs[parsedKey.name].v[parsedKey.version] || !this.pkgs[parsedKey.name].v[parsedKey.version].mods[parsedKey.module]) {
         if (key in localStorage) {
           try {
-            files = JSON.parse(localStorage[key])
+            mod = JSON.parse(localStorage[key])
           } catch(e) {
             delete localStorage[key]
-            this.setMeta(name, version, null)
+            this.setMeta(parsedKey.full, null)
           }
 
-          this.mods[name].v[version] = {files: files, meta: this.metas[name].v[version]}
+          this.pkgs[parsedKey.name].v[parsedKey.version] = this.pkgs[parsedKey.name].v[parsedKey.version] || {mods: {}, meta: this.metas[parsedKey.name] && this.metas[parsedKey.name].v[parsedKey.version]}
+          this.pkgs[parsedKey.name].v[parsedKey.version].mods[parsedKey.module] = {src: mod, meta: this.metas[parsedKey.full]}
         }
       }
 
-      return this.mods[name].v[version] || null
+      return this.pkgs[parsedKey.name].v[parsedKey.version].mods[parsedKey.module] || null
     },
     setMod: function(name, version, mod) {
-      var self = this
+      var parsedKey = keyParser.parse(keyParser.format({module: name, version: version}))
 
-      if (typeof name !== 'string' || typeof version !== 'string' || typeof mod !== 'object') {
+      if (typeof parsedKey.name !== 'string' || typeof parsedKey.version !== 'string' || typeof parsedKey.path !== 'string' || typeof mod !== 'object') {
         throw new Error('Invalid params: ' + JSON.stringify(arguments))
       }
 
-      this.setMeta(name, version, mod.meta)
+      this.pkgs[parsedKey.name] = this.pkgs[parsedKey.name] || {v: {}, meta: this.metas[parsedKey.name] || {}}
+      this.pkgs[parsedKey.name].v[parsedKey.version] = this.pkgs[parsedKey.name].v[parsedKey.version] || {mods: {}}
+      this.pkgs[parsedKey.name].v[parsedKey.version].mods[parsedKey.module] = mod
 
-      this.mods[name] = this.mods[name] || {v: {}, meta: this.metas[name] || {}}
-      this.mods[name].v[version] = mod
-
-      if (!this.metas[name].latest || version > this.metas[name].latest) {
-        this.metas[name].latest = version
+      this.metas[parsedKey.name] = this.metas[parsedKey.name] || {latest: parsedKey.version, v: {}, meta: {}}
+      if (!this.metas[parsedKey.name].latest || parsedKey.version > this.metas[parsedKey.name].latest) {
+        this.metas[parsedKey.name].latest = parsedKey.version
       }
 
-      setTimeout(function() {
-        localStorage['tiki_' + name + '@' + version] = JSON.stringify(mod.files)
-        localStorage['tiki$' + name] = JSON.stringify(self.metas[name])
-      }, 0)
+      localStorage['tiki_' + parsedKey.full] = JSON.stringify(mod.src)
+      localStorage['tiki$' + parsedKey.module] = JSON.stringify(mod.meta)
     },
-    getMeta: function(name, version) {
+    getModMeta: function(fullName) {
+      var parsedKey = keyParser.parse(fullName)
+
+      if (!this.metas[parsedKey.full]) {
+        if ('tiki$' + parsedKey.module in localStorage) {
+          try {
+            this.metas[parsedKey.full] = JSON.parse(localStorage['tiki$' + parsedKey.module])
+          } catch(e) {
+            this.remove(parsedKey.full)
+          }
+        } else {
+          return null
+        }
+      }
+
+      return this.metas[parsedKey.full] || null
+    },
+    getPkgMeta: function(name, version) {
+      name = keyParser.parse(name).name
+
       if (!this.metas[name]) {
         if ('tiki$' + name in localStorage) {
           try {
+            console.log('loading from localStorage')
             this.metas[name] = JSON.parse(localStorage['tiki$' + name])
           } catch(e) {
             this.remove(name)
+            return null
           }
         } else {
           return null
@@ -250,7 +289,22 @@ var Store = {
       }
 
       version = version || this.metas[name].latest
-      return this.metas[name].v[version] || null
+      return this.metas[name] && this.metas[name].v[version] || null
+    },
+    setModMeta: function(name, version, meta) {
+      var parsedKey = keyParser.parse(keyParser.format({module: name, version: version}))
+
+      if (typeof parsedKey.name !== 'string' || typeof parsedKey.version !== 'string' || typeof parsedKey.path !== 'string' || typeof mod !== 'object') {
+        throw new Error('Invalid params: ' + JSON.stringify(arguments))
+      }
+
+      if (this.metas[parsedKey.full] && meta === null) {
+        delete this.metas[parsedKey.full]
+        return
+      }
+
+      this.metas[parsedKey.full] = meta
+      localStorage['tiki$' + parsedKey.full] = JSON.stringify(this.metas[parsedKey.full])
     },
     setMeta: function(name, version, meta) {
       if (typeof name !== 'string' || typeof version !== 'string' || typeof meta !== 'object') {
@@ -272,7 +326,8 @@ var Store = {
       localStorage['tiki$' + name] = JSON.stringify(this.metas[name])
     },
     listVersions: function(name) {
-      this.getMeta(name)
+      this.getPkgMeta(name)
+      name = name.split('/')[0]
       if (this.metas[name]) {
         return Object.keys(this.metas[name].v)
       }
@@ -282,15 +337,15 @@ var Store = {
       var keys = Object.keys(localStorage), i=0, l=keys.length
 
       // don't lock up the UI 
-      (function doit() {
+      (function innerRemove() {
         setTimeout(function() {
           if (keys[i].indexOf('tiki_' + name) === 0) {
             delete localStorage[keys[i]]
           }
-          if (++i<l) doit()
+          if (++i<l) innerRemove()
         }, 0)
       })()
-      ;delete this.mods[name]
+      ;delete this.pkgs[name]
       ;delete this.meta[name]
       ;delete localStorage['tiki$'+name]
     }
@@ -313,7 +368,8 @@ tiki.config = function(opts) {
 tiki.clear = function() {
   console.debug('tiki.clear')
   localStorage.clear()
-  this.window.postMessage('clear','*')
+  var win = this.window || document.querySelector('iframe[data-tikiid]').contentWindow
+  win.postMessage('clear','*')
 }
 
 if (!window.tiki) {

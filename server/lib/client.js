@@ -12,7 +12,7 @@ function Client(id) {
 
 	if (Client.all[id]) return Client.all[id]
 
-	self.mods = []
+	self.pkgs = []
 	self.id = parseInt(id, 10) || ++Client.id
 	console.log('Client.id: ', self.id)
 	Client.all[self.id] = self

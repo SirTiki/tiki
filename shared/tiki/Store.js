@@ -3,6 +3,7 @@ console.debug('tiki/Store ctor')
 var inherits = require('tiki/inherits')
   , EventEmitter = require('tiki/EventEmitter')
   , _ = require('tiki/underscore')
+  , keyParser = require('tiki/keyParser')
 
 module.exports = Store
 function Store(namespace) {
@@ -55,7 +56,7 @@ _.extend(Store.prototype
 
       var store = this.store
 
-      if (store instanceof Store) {
+      if (Object.prototype.toString.call(store) === '[object Storage]') {
         try {
           store[key] = val
         } catch(e) {
@@ -78,9 +79,9 @@ _.extend(Store
   , store: new Store(null)
   , stores: []
   , metas: {}
-  , mods: {}
-  , getMod: function(name, version, cb) {
-      console.debug('Store:::getMod: ', {name:name, version: version})
+  , pkgs: {}
+  , getPkg: function(name, version, cb) {
+      console.debug('Store:::getPkg: ', {name:name, version: version})
 
       var mod
 
@@ -89,8 +90,8 @@ _.extend(Store
         version = null
       }
 
-      if (this.mods[name]) {
-        return cb(this.mods[name].v[version || this.metas[name].latest])
+      if (this.pkgs[name]) {
+        return cb(this.pkgs[name].v[version || this.metas[name].latest])
       }
 
       mod = {meta: this.getMeta(name, version)}
@@ -98,32 +99,49 @@ _.extend(Store
         return cb(null)
       }
 
-      this.mods[name] = mod
+      this.pkgs[name] = mod
       this.getItem(name
       , version || this.metas[name].latest
       , function(val) {
-          mod.files = val
+          mod.mods = val
           cb(mod)
         })
     }
-  , setMod: function(name, version, mod) {
-      console.debug('Store:::setMod: ', {name:name, version: version, meta: mod})
+  , getMod: function(fullName, cb) {
+      console.debug('Store:::getMod: ', {fullName: fullName})
 
-      if (typeof name !== 'string' || typeof version !== 'string' || typeof mod !== 'object') {
+      var key = keyParser.parse(fullName)
+        , mod
+
+      key.version = key.version || this.metas[name].latest
+      if (this.pkgs[key.name] && this.pkgs[key.name].v[key.version] && this.pkgs[key.name].v[key.version].mods[key.module]) {
+        return cb(this.pkgs[key.name].v[key.version].mods[key.module])
+      }
+
+      this.getItem(fullName, cb)
+    }
+  , setMod: function(fullName, mod) {
+      console.debug('Store:::setMod: ', {fullName: fullName, meta: mod})
+
+      var key = keyParser.parse(fullName)
+        , mod
+
+      if (typeof key.name !== 'string' || typeof key.version !== 'string' || typeof key.module !== 'string' || typeof mod !== 'object') {
         throw new Error('Invalid params: ' + JSON.stringify(arguments))
       }
 
-      mod = _.pick(mod, ['meta', 'files'])
-      mod.meta = mod.meta || {}
+      mod = _.pick(mod, ['meta', 'src'])
+      mod.meta = mod.meta || {deps: []}
 
-      this.setMeta(name, version, mod.meta)
-      this.mods[name] = this.mods[name] || {v: {}, meta: this.metas[name]}
-      this.mods[name].v[version] = mod
+      this.setModMeta(fullName, mod.meta)
+      this.pkgs[key.name] = this.pkgs[key.name] || {v: {}, meta: this.metas[key.name]}
+      this.pkgs[key.name].v[key.version] = {mods: {}}
+      this.pkgs[key.name].v[key.version].mods[key.module] = mod
 
-      this.setItem(name, version, JSON.stringify(mod.files))
+      this.setItem(fullName, JSON.stringify(mod.src))
     }
-  , getMeta: function(name, version) {
-      console.debug('Store:::getMeta: ', {name:name, version: version})
+  , getPkgMeta: function(name, version) {
+      console.debug('Store:::getPkgMeta: ', {name:name, version: version})
 
       var meta
 
@@ -139,8 +157,8 @@ _.extend(Store
       }
       return this.metas[name]
     }
-  , setMeta: function(name, version, meta) {
-      console.debug('Store:::setMeta: ', {name:name, version: version, meta: meta})
+  , setPkgMeta: function(name, version, meta) {
+      console.debug('Store:::setPkgMeta: ', {name:name, version: version, meta: meta})
 
       this.metas[name] = this.metas[name] || {v: {}}
       if (typeof this.metas[name].ns === 'undefined') {
@@ -148,47 +166,71 @@ _.extend(Store
       }
 
       if (typeof version === 'string') {
-        this.metas[name].v[version] = _.mask(meta, ['deps'])
+        this.metas[name].v[version] = _.pick(meta, ['deps'])
         this.metas[name].latest = Object.keys(this.metas[name].v).sort(function(a, b) {return a < b})[0]
       } else {
         this.metas[name] = meta
       }
       this.store.setItem('$'+name, JSON.stringify(this.metas[name]))
     }
-  , getItem: function(name, version, cb) {
-      console.debug('Store:::getItem: ', name)
+  , getModMeta: function(fullName) {
+      console.debug('Store:::getModMeta: ', {fullName: fullName})
 
-      var namespace = this.getNS(name)
+      var meta
+
+      if (!this.metas[fullName]) {
+        meta = this.store.getItem('$'+fullName)
+        if (meta) {
+          this.metas[fullName] = JSON.parse(meta)
+        }
+      }
+
+      return this.metas[fullName]
+    }
+  , setModMeta: function(fullName, meta) {
+      console.debug('Store:::setModMeta: ', {fullName:fullName, meta: meta})
+
+      var ns = this.metas[fullName] && this.metas[fullName].ns
+      this.metas[fullName] = meta || {}
+      if (typeof ns === 'undefined') {
+        this.metas[fullName].ns = this.allocateNS(fullName)
+      } else this.metas[fullName].ns = ns
+
+      this.store.setItem('$'+fullName, JSON.stringify(this.metas[fullName]))
+    }
+  , getItem: function(fullName, cb) {
+      console.debug('Store:::getItem: ', fullName)
+
+      var namespace = this.getNS(fullName)
         , store
 
       if (typeof namespace === 'undefined') {
         return cb()
       }
       if (namespace === '$') {
-        return cb(this.store.getItem('_'+name + '@' + version))
+        return cb(this.store.getItem('_'+fullName))
       }
 
       store = this.stores[namespace] || new Store(namespace)
       if (store.store) {
-        return cb(store.getItem(name, version))
+        return cb(store.getItem(fullName))
       }
 
       store.on('load', function() {
-        cb(store.getItem(name, version))
+        cb(store.getItem(fullName))
       })
     }
-  , setItem: function(name, version, value) {
-        if (''+value === '[object Object]') debugger
-      console.debug('Store:::setItem: ', {name:name, version: version, value:value})
+  , setItem: function(fullName, value) {
+      console.debug('Store:::setItem: ', {fullName: fullName, value:value})
 
       var self = this
-        , namespace = this.getNS(name)
+        , namespace = this.getNS(fullName)
         , store
 
       if (typeof namespace === 'undefined') {
-        throw new Error('No metadata set for ', name)
+        throw new Error('No metadata set for ', fullName)
       }
-      if (name.split('.')[0] === 'tiki' && namespace !== '$') {
+      if (fullName.split('@')[0] === 'tiki' && namespace !== '$') {
         throw new Error('tiki/* must be stored in $')
       }
 
@@ -211,7 +253,7 @@ _.extend(Store
       }
 
       function finish() {
-        var ret = store.setItem((namespace === '$' ? '_' : '') + name + '@' + version, value)
+        var ret = store.setItem((namespace === '$' ? '_' : '') + fullName, value)
 
         if (ret === false) {
             throw new Error('Out of room in '+namespace)
@@ -224,29 +266,29 @@ _.extend(Store
             // Throw a BIG error if namespace === '$'
 
             self.allocate()
-            ;delete store.store[name + '@' + version]
-            self.setItem(name, value)
+            ;delete store.store[fullName]
+            self.setItem(fullName, value)
         }
       }
     }
-  , setNS: function(name, ns) {
-      console.debug('Store:::getNS: ', name)
+  // , setNS: function(name, ns) {
+  //     console.debug('Store:::getNS: ', name)
 
-      var meta = this.getMeta(name)
-      meta.ns = ns
-      this.setMeta(meta)
-    }
-  , getNS: function(name) {
-      console.debug('Store:::getNS: ', name)
+  //     var meta = this.getModMeta(name)
+  //     meta.ns = ns
+  //     this.setMeta(meta)
+  //   }
+  , getNS: function(fullName) {
+      console.debug('Store:::getNS: ', fullName)
 
-      return (this.getMeta(name) || {}).ns
+      return (this.getModMeta(fullName) || this.getPkgMeta(fullName) || {}).ns
     }
   , allocate: function() {
       this.store.setItem('lastNS', ++this.lastNS)
       return this.lastNS
     }
   , allocateNS: function(path) {
-      return path.split('.')[0] === 'tiki' ? '$' : this.lastNS
+      return path.split('@')[0] === 'tiki' || path.split('/')[0] === 'tiki' ? '$' : this.lastNS
     }
   , clear: function() {
       console.debug('Store:::clear: ', this.stores)

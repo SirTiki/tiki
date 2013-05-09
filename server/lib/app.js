@@ -19,7 +19,7 @@ function App(id) {
 
 	if (App.all[id]) return App.all[id];
 
-	self.mods = []
+	self.pkgs = []
 	self.id = parseInt(id, 10) || ++App.id
 	console.log('App.id: ', self.id)
 	App.all[self.id] = self

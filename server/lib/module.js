@@ -4,255 +4,249 @@
 
 var util = require('util')
 	, fs = require('fs')
-	, vm = require('vm')
 	, path = require('path')
 	, zlib = require('zlib')
+
 	, requestLib = require('request')
 	, semver = require('semver')
 	, tar = require('tar')
+	, detective = require('detective')
+
 	, $$ = require('lib/twostep')
 	, _ = require('lib/_')
-	, couchServer = 'http://localhost:5984/registry/_design/app/_rewrite'
+	, couchServer = 'http://registry.tikijs.net:5984'
 
-module.exports = Module
-function Module() {
-	// PRIVATE
-	function getPublicModule(key, cb) {
-		var query = util.format('%s/%s/%s', couchServer, key.name, key.version || key.latest || '')
-			, ret = {}
+module.exports = {
+	getModules: getModules
+, getModule: getModule
+, validateKey: validateKey
+}
 
-		console.log('Querying URL: ', query)
+function getPublicModule(key, cb) {
+	var query = util.format('%s/%s/%s', couchServer, key.name.split('/')[0], key.version || 'latest')
+		, ret = {}
 
-		$$([
-			$$.stepit(requestLib, query)
-		, function($, res, body) {
-				if (res.error) return $.end(new Error(res.error))
 
-				$.data.body = body = JSON.parse(res.body)
+	$$([
+		$$.stepit(requestLib, query)
+	, function($, res, body) {
+			if (res.error) return $.end(new Error(res.error))
 
-				console.log(query, '\n', body)
-				if (body.error) return $.end(new Error(query + '\n' + body.reason))
+			$.data.body = body = JSON.parse(res.body)
 
-				if (body.versions) {
-					body = body.versions[semver.maxSatisfying(Object.keys(body.versions), key.range)]
-				}
+			if (body.error) return $.end(new Error(query + '\n' + body.reason))
 
-				requestLib(body.dist.tarball).pipe(zlib.Gunzip()).pipe(tar.Parse({ type: "Directory"}))
-					.on('*', function(type, entry) {
-						entry.path = entry.path.replace(/^package\//,'').replace(/\.js$/,'')
-						ret[entry.path] = ''
+			if (body.versions) {
+				body = body.versions[semver.maxSatisfying(Object.keys(body.versions), key.range)]
+			}
 
-						entry.on('data', function(data) {
-							ret[entry.path] += data
-						})
+			requestLib(body.dist.tarball).pipe(zlib.Gunzip()).pipe(tar.Parse({ type: "Directory"}))
+				.on('*', function(type, entry) {
+					var modulePath
 
-						entry.on('end', function() {
-							ret[entry.path] += '\n//@ sourceURL=' + name + '/' + entry.path
-						})
+					if (entry.path.substr(-3) !== '.js') return
+
+					entry.path = entry.path.replace(/^package\//,'').replace(/\.js$/,'')
+					modulePath = key.name + (key.version ? '@' + key.version : '') + '/' + entry.path
+					ret[modulePath] = {src: ''}
+
+					entry.on('data', function(data) {
+						ret[modulePath].src += data
 					})
-					.on('end', $.none())
-			}
-		, function($) {
-				var deps = []
-					, body = $.data.body
-					, i
 
-				if (_.isSimpleObject(body.dependencies)) {
-					for (i in body.dependencies) {
-						deps.push(i + '@' + body.dependencies[i])
-					}
-				}
-				$.spread()(null, body.version, ret, deps)
-			}
-		], cb)
-	}
-
-	function getTikiModule(key, cb) {
-		var ret = {}
-		, filename = key.name+'.js'
-
-		console.log('getTikiModule')
-
-		$$([
-			$$.stepit(fs.readFile, path.join(__dirname, '/../src/', filename))
-		, function($, data) {
-				var deps
-				, called = false
-
-				function define() {
-					called = true
-
-					if (Array.isArray(arguments[0])) {
-						deps = arguments[0]
-					} else if (Array.isArray(arguments[1])) {
-						deps = arguments[1]
-					}
-				}
-
-				define.amd = true
-
-				data += '\n//@ sourceURL=' + name
-				ret[name] = data
-
-				vm.runInNewContext(data, {define: define}, filename)
-
-				if (!called) {
-					return new Error('Failed to load: ' + filename)
-				}
-
-				console.log('dependencies: ', deps)
-				$.spread()(null, '0.0.1', ret, deps || [])
-			}
-		], cb)
-	}
-
-	// PUBLIC
-	function validateKey(key) {
-		var v
-			, latest
-			, version
-			, range
-			, name
-
-		console.log('validateKey: ', key)
-		if (typeof key !== 'string') return false
-
-		// parse for versions, e.g., "trycatch@1.0.0"
-		v = key.split('@')
-
-		latest = v[1] === 'latest' || !v[1] ? 'latest' : null
-		version = semver.valid(v[1])
-		range = version === null && typeof v[1] === 'string' ? semver.validRange(v[1]) : null
-		name = v[0]
-
-		console.log({
-			name: name,
-			version: version,
-			range: range,
-			latest: latest
-		})
-		if (name === '' || (!version && !latest && range === null)) {
-			return false
+					entry.on('end', function() {
+						try{detective(ret[modulePath].src)} catch(e) {console.log('===============',ret[modulePath].src); throw new Error(modulePath + e.message)}
+						ret[modulePath].meta = {deps: detective(ret[modulePath].src)}
+						ret[modulePath].src = 'define("'+modulePath+'", function(require, exports, module) {'+ret[modulePath].src + '\n})\n//@ sourceURL=' + modulePath
+					})
+				})
+				.on('end', $.none())
 		}
-		return {
-			name: name,
-			version: version,
-			range: range,
-			latest: latest
+	, function($) {
+			var deps = []
+				, body = $.data.body
+				, i
+
+			if (_.isSimpleObject(body.dependencies)) {
+				for (i in body.dependencies) {
+					deps.push(i + '@' + body.dependencies[i])
+				}
+			}
+			$.spread()(null, body.version, ret, deps)
 		}
+	], cb)
+}
+
+function getTikiModule(key, cb) {
+	var ret = {}
+	, filename = key.name + key.path +'.js'
+
+
+	$$([
+		$$.stepit(fs.readFile, path.join(__dirname, '/../../shared/', filename))
+	, function($, src) {
+			try{detective(src)} catch(e) {throw new Error(filename + e.message)}
+			var dependencies = detective(src)
+				, modulePath = key.name + (key.version ? '@' + key.version : '') + key.path
+
+			ret[modulePath] = {meta: {deps: dependencies}}
+			ret[modulePath].src = 'define("'+modulePath+'", function(require, exports, module) {'+ src + '\n})\n//@ sourceURL=' + modulePath + '.js'
+
+			$.spread()(null, '0.0.1', ret, dependencies || [])
+		}
+	], cb)
+}
+
+// PUBLIC
+function validateKey(key) {
+	var re = /([^@\/]+)(@[^\/]+)?(\/.*)?/g
+		, path = ''
+		, matches
+		, latest
+		, version
+		, range
+		, name
+
+	if (typeof key !== 'string') return false
+
+	// parse for versions, e.g., "trycatch@1.0.0/a/b/c"
+	matches = re.exec(key)
+
+	name = matches[1]
+	matches[2] = matches[2] && matches[2].substr(1)
+	version = matches[2]
+	path = matches[3]
+
+	latest = version === 'latest' || !version ? 'latest' : null
+	version = semver.valid(version)
+	range = version === null && typeof matches[2] === 'string' ? semver.validRange(matches[2]) : null
+
+	if (name === '' || (!version && !latest && range === null)) {
+		return false
+	}
+	return {
+		name: name,
+		path: path || '',
+		version: version,
+		range: range,
+		latest: latest,
+		key: key
+	}
+}
+
+// SS:
+// 1. get package
+// 2. package.dependencies = meta.deps
+// 3. later, filter on already installed
+
+// CS:
+// a. dependency metadata will require semver
+// b. client-side on require will need to run:
+// 		semver.maxSatisfying(Object.keys(meta[dep]), meta[name].deps[dep])
+function getModule(name, cb) {
+	var key = validateKey(name)
+
+	console.log('getModule: ', name)
+
+	$$([
+		function($) {
+			if (!key) {
+				return new Error('Invalid key passed: '+key)
+			}
+
+			if (key.name === 'tiki') {
+				getTikiModule(key, $.spread())
+			} else {
+				getPublicModule(key, $.spread())
+			}
+		}
+	], cb)
+}
+
+function getModules(namesOrig, filter, cb) {
+	var ret = {}
+		, localFilter
+
+	console.log('getModules: ', filter, namesOrig)
+
+	// The filter is for modules we've already loaded
+	if ('function' === typeof filter) {
+		cb = filter
+		filter = []
 	}
 
-	// SS:
-	// 1. get package
-	// 2. package.dependencies = meta.deps
-	// 3. later, filter on already installed
+	localFilter = [].concat(filter)
+	namesOrig = [].concat(namesOrig)
 
-	// CS:
-	// a. dependency metadata will require semver
-	// b. client-side on require will need to run:
-	// 		semver.maxSatisfying(Object.keys(meta[dep]), meta[name].deps[dep])
-	function getModule(name, cb) {
-		var key = validateKey(name)
-
-		console.log('getModule: ', name)
-
+	/* ret
+	{
+		pkgA: {
+			v: {
+				'1.0.0': {
+					mods: {
+						'main.js': 'console.log("hello")'
+					},
+					deps: ['pkgB@0.0.9']
+				}
+			},
+			meta: {
+				latest: '1.0.0'
+			}
+		}
+	}
+	*/
+	// Get module metadata and source
+	// Recurse on deps as necessary
+	;(function innerGetModules(names, outerNext) {
 		$$([
 			function($) {
-				if (!key) {
-					return new Error('Invalid key passed: '+key)
-				}
+				var group = $.group()
 
-				if (key.name.split('.')[0] === 'tiki') {
-					getTikiModule(key, $.first())
-				} else {
-					getPublicModule(key, $.first())
-				}
-			}
-		], cb)
-	}
+				if (!names.length) return $.end()
 
-	function getModules(namesOrig, filter, cb) {
-		var ret = {}
-			, localFilter
+				_.each(names, function(name) {
+					var innerNext = group()
+						, v = validateKey(name)
+						, version
 
-		console.log('getModules: ', namesOrig)
+					if (v === false) return innerNext(new Error('Invalid module name: '+name))
 
-		// The filter is for modules we've already loaded
-		if ('function' === typeof filter) {
-			cb = filter
-			filter = []
-		}
+					version = v.version || v.latest || semver.maxSatisfying(localFilter, v.range)
 
-		localFilter = [].concat(filter)
-		namesOrig = [].concat(namesOrig)
+					if (version && ret[v.name] && ret[v.name][version]) {
+						if (localFilter.indexOf(v.name+'@'+version) !== -1) return innerNext()
+						if (ret[v.name][version].deps.length) {
+							return innerGetModules(ret[v.name][version].deps, innerNext)
+						} else return innerNext()
+					} else {
+						// mark the module as pending in the filter
+						getModule(name, function(err, realVersion, source, deps) {
+							console.log(v.name+'@'+realVersion + v.path, localFilter)
+							for(var q in localFilter) {
+								if (localFilter[q].indexOf(v.name+'@'+realVersion + v.path) !== -1) return innerNext()
+							}
+							localFilter.push(v.name+'@'+realVersion + v.path)
+							ret[v.name] = ret[v.name] || {v: {}, meta: {latest: null}}
 
-		/* ret
-		{
-			modA: {
-				v: {
-					'1.0.0': {
-						files: {
-							'main.js': 'console.log("hello")'
-						},
-						deps: ['modB@0.0.9']
-					}
-				},
-				meta: {
-					latest: '1.0.0'
-				}
-			}
-		}
-		*/
-		// Get module metadata and source
-		// Recurse on deps as necessary
-		;(function doit(names, outerNext) {
-			$$([
-				function($) {
-					var group = $.group()
+							if (err) return innerNext(err)
 
-					if (!names.length) return $.end()
-
-					_.each(names, function(name) {
-						var innerNext = group()
-							, v = Module.validateKey(name)
-							, version
-
-						if (v === false) return innerNext(new Error('Invalid module name: '+name))
-
-						version = v.version || v.latest || semver.maxSatisfying(localFilter, v.range)
-
-						if (version && ret[v.name] && ret[v.name][version]) {
-							if (localFilter.indexOf(v.name+'@'+version) !== -1) return innerNext()
-							if (ret[v.name][version].deps.length) {
-								return doit(ret[v.name][version].deps, innerNext)
+							if (!ret[v.name].v[realVersion]) {
+								ret[v.name].v[realVersion] = {mods: source}
+							} else {
+								_.extend(ret[v.name].v[realVersion].mods, source)
+							}
+							if (version === 'latest') {
+								ret[v.name].meta.latest = realVersion
+							}
+							if (deps.length) {
+								return innerGetModules(deps, innerNext)
 							} else return innerNext()
-						} else {
-							// mark the module as pending in the filter
-							Module.getModule(name, function(err, realVersion, source, deps) {
-								if (localFilter.indexOf(v.name+'@'+realVersion) !== -1) return innerNext()
-								localFilter.push(v.name+'@'+realVersion)
-								ret[v.name] = {v: {}, meta: {latest: null}}
-
-								if (err) return innerNext(err)
-
-								ret[v.name].v[realVersion] = {files: source, meta: { deps: deps } }
-								if (version === 'latest') {
-									ret[v.name].meta.latest = realVersion
-								}
-								if (deps.length) {
-									return doit(deps, innerNext)
-								} else return innerNext()
-							})
-						}
-					})
-				}
-			], outerNext)
-		})(namesOrig, _.partial(cb, undefined, ret))
-	}
-
-	return {
-		getModules: getModules
-	, getModule: getModule
-	, validateKey: validateKey
-	}
+						})
+					}
+				})
+			}
+		], outerNext)
+	})(namesOrig, function(err) {
+		cb(err, ret)
+	})
 }

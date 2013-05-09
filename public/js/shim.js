@@ -13,9 +13,10 @@
 			ctor = deps
 			deps = null
 
-			var ret = ctor()
-			window.define = ret.define
-			window.require = ret.require
+			var module = {exports: {}}
+			ctor(null, module.exports, module)
+			window.define = module.exports.define
+			window.require = module.exports.require
 
 			for (var i=0,l=dQueue.length; i<l; ++i) {
 				window.define.version = dQueue[i].pop()

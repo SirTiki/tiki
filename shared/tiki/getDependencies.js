@@ -1,21 +1,21 @@
 console.debug('tiki/getDependencies ctor')
 // Calculate all the dependency names given an array of names, paths
 // TODO: Maintain cache across calls?
-module.exports =  function(names, mods) {
+module.exports =  function(names, pkgs) {
 	var cache = {},
-		fn = typeof mods === 'function' ? mods : getDeps
+		fn = typeof pkgs === 'function' ? pkgs : getDeps
 
 	return doit([].concat(names))
 
 	function getDeps(path) {
-		var mod = mods[path]
+		var pkg = pkgs[path.split('/')[0]]
 
-		if (typeof mod === 'undefined') {
-			console.debug('Seed: ',mods)
+		if (typeof pkg === 'undefined' || typeof pkg.v[pkg.meta.latest].mods[path] === 'undefined') {
+			console.debug('Seed: ',pkgs)
 			throw new Error('Dependency "'+path+'" not in seed.')
 		}
 
-		return mod.v[mod.meta.latest].meta.deps || []
+		return pkg.v[pkg.meta.latest].mods[path].meta.deps || []
 	}
 
 	function doit(path) {

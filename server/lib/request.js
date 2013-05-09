@@ -12,27 +12,29 @@ var Client = require('lib/client')
 module.exports = Request
 function Request(data) {
 	var client = Client(data.id)
-		, mods = data.mods.concat(client.mods)
+		, pkgs = data.pkgs.concat(client.pkgs)
 
-	console.log('new Request', data)
+	console.log('new Request', data, client.pkgs)
 
 	// getDependencies => filter previously loaded => Module.getSrc => package 
 	function getModules(cb) {
 		$$([
-			$$.stepit(Module.getModules, mods, client.mods)
-		, function($, mods) {
-				var i
-					, j
+			$$.stepit(Module.getModules, pkgs, client.pkgs)
+		, function($, pkgs) {
+				var i, j, k
 
-				for (i in mods) {
-					for (j in mods[i].v) {
-						if (client.mods.indexOf(i+'@'+j) === -1) {
-							client.mods.push(i+'@'+j);
+				for (i in pkgs) {
+					for (j in pkgs[i].v) {
+						for (k in pkgs[i].v[j].mods) {
+							k = k.replace(i, '')
+							if (client.pkgs.indexOf(i+'@'+j + k) === -1) {
+								client.pkgs.push(i+'@'+j + k);
+							}
 						}
 					}
 				}
-				console.log('client.mods: ', JSON.stringify(client.mods))
-				cb(null, mods)
+				console.log('client.pkgs: ', JSON.stringify(client.pkgs))
+				cb(null, pkgs)
 
 			}
 		], cb)
@@ -40,5 +42,6 @@ function Request(data) {
 
 	return {
 		getModules: getModules
+	, client: client
 	}
 }

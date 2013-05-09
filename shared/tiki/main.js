@@ -5,30 +5,36 @@ var Bootstrap = require('tiki/Bootstrap')
 	, _ = require('tiki/underscore')
 	, getDependencies = require('tiki/getDependencies')
 	, step = require('tiki/step')
+	, keyParser = require('tiki/keyParser')
 
-module.exports = _.extend(Bootstrap, {
+window.tiki = module.exports = _.extend(Bootstrap, {
 	_init: Bootstrap.init
-, init: function(id, mods) {
-		console.debug('tiki/main::init', mods)
+, init: function(id, pkgs) {
+		console.debug('tiki/main::init', pkgs)
 
 		var self = this
 
 		this.id = this.id || id
-		if (this.mods) {
+		if (this.pkgs) {
 			// Store all modules in memory
 			setTimeout(function() {
-					var i, j
+					var key
+						, i, j, k
 
-					for (i in self.mods) {
-						for (j in self.mods[i].v) {
-							Store.setMod(i, j, self.mods[i].v[j])
+					for (i in self.pkgs) {
+						for (j in self.pkgs[i].v) {
+							Store.setPkgMeta(i, j, self.pkgs[i].v[j].meta || {})
+							for (k in self.pkgs[i].v[j].mods) {
+								key = keyParser.parse(keyParser.format({version: j, module: k}))
+								Store.setMod(key.full, self.pkgs[i].v[j].mods[k])
+							}
 						}
 					}
 				}
 			, 10)
 		} else {
 			this.onMessage.that = this
-			this._init(mods, false)
+			this._init(pkgs, false)
 		}
 	}
 	// Store remote modules and handle meta data
@@ -36,11 +42,16 @@ module.exports = _.extend(Bootstrap, {
 		console.debug('tiki::onResponse: ', res)
 		// when stores are done initializing, store modules
 		setTimeout(function() {
-			var i, j
+			var key
+				, i, j, k
 
-			for (i in res.mods) {
-				for (j in res.mods[i].v) {
-					Store.setMod(i, j, res.mods[i].v[j])
+			for (i in res.pkgs) {
+				for (j in res.pkgs[i].v) {
+					Store.setPkgMeta(i, j, res.pkgs[i].v[j].meta || {})
+					for (k in res.pkgs[i].v[j].mods) {
+						key = keyParser.parse(keyParser.format({version: j, module: k}))
+						Store.setMod(key.full, res.pkgs[i].v[j].mods[k])
+					}
 				}
 			}
 		},0)
@@ -89,8 +100,8 @@ module.exports = _.extend(Bootstrap, {
 
 				if (remotePaths.length) {
 					self.getRemotes(remotePaths
-					, function(mods) {
-							parallel(null, mods)
+					, function(pkgs) {
+							parallel(null, pkgs)
 						})
 				} else parallel()
 			}
@@ -132,6 +143,7 @@ module.exports = _.extend(Bootstrap, {
 			})
 	}
 ,	clear: function() {
+		console.debug('Clearing Storage')
 		Store.clear()
 	}
 })

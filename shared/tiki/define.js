@@ -68,6 +68,7 @@ function require(name, cb, module) {
 		, args
 		, specials
 		, deps
+		, exports
 		, i, l
 
 	if (name.indexOf('@') !== -1) {
@@ -80,7 +81,8 @@ function require(name, cb, module) {
 
 	key = name+'@'+version
 
-	console.debug('require('+key+') - ' + (defined[name] && defined[name][version] ? 'defined' : ' NOT defined'))
+	console.log(defined)
+	console.debug('require('+key+', '+name+') - ' + (defined[name] && defined[name][version] ? 'defined' : ' NOT defined'))
 
 	if (!cache[key]) {
 		def = defined[name] && defined[name][version]
@@ -96,11 +98,13 @@ function require(name, cb, module) {
 		}
 
 		args = []
+		exports = {}
 		specials = {
 			require: require,
-			exports: {},
+			exports: exports,
 			module: {
 				id: name,
+				exports: exports,
 				parent: arguments.callee.caller && arguments.callee.caller.arguments[2],
 				filename: 'https://'+window.location.host+'/module/'+name,
 				loaded: false,
@@ -129,7 +133,7 @@ function require(name, cb, module) {
 
 		console.debug('Constructing: ', key)
 		// Run AMD callback, assign as return value or exports object
-		cache[key] = def.ctor.apply(null, args) || specials.exports
+		cache[key] = def.ctor.apply(null, args) || specials.module.exports || specials.exports
 		specials.module.loaded = true
 		console.debug('Constructed: ',key)
 	}
