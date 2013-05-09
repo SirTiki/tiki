@@ -1,5 +1,5 @@
 {
-  "name": "Function",
+  "name": "function",
   "version": "0.0.1",
   "description": "Helper methods for JavaScript's Function object",
   "main": "index.js",

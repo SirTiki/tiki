@@ -1,5 +1,5 @@
 {
-  "name": "Array",
+  "name": "array",
   "version": "0.0.1",
   "description": "Helper methods for JavaScript's Array object",
   "main": "index.js",

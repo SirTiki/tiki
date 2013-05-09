@@ -1,5 +1,5 @@
 {
-  "name": "Object",
+  "name": "object",
   "version": "0.0.1",
   "description": "Helper methods for JavaScript's Object object",
   "main": "index.js",
